@@ -1,11 +1,6 @@
 immutability-helper
 ===================
 
-[![NPM version][npm-image]][npm-url]
-[![Build status][travis-image]][travis-url]
-[![Test coverage][coveralls-image]][coveralls-url]
-[![Downloads][downloads-image]][downloads-url]
-
 Mutate a copy of data without changing the original source
 
 This is a drop in* replacement for [`react-addons-update`](https://facebook.github.io/react/docs/update.html):
