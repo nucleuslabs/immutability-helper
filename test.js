@@ -71,6 +71,12 @@ describe('update', function() {
         'Expected $splice target to be an array; got 1'
       );
     });
+    it('works the same way regardless of order', function() {
+      let splice = [[1,1],[3,1]];
+      let spliceCopy = Array.prototype.slice.call(splice);
+      expect(update([0,1,2,3,4,5], {$splice: splice})).toEqual([ 0, 2, 4, 5 ]);
+      expect(splice).toEqual(spliceCopy);
+    });
   });
 
   describe('$merge', function() {

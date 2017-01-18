@@ -88,7 +88,12 @@ var defaultCommands = {
   $splice: function(value, nextObject, spec, object) {
     var originalValue = nextObject === object ? copy(object) : nextObject;
     invariantSplices(originalValue, spec);
-    value.forEach(function(args) {
+    var sortedValue = Array.prototype.slice.call(value).sort((a,b) => {
+      if(a[0] < b[0]) return 1;
+      if(a[0] > b[0]) return -1;
+      return 0;
+    });
+    sortedValue.forEach(function(args) {
       invariantSplice(args);
       splice.apply(originalValue, args);
     });
