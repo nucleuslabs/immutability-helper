@@ -1,5 +1,5 @@
 immutability-helper
-===
+===================
 
 [![NPM version][npm-image]][npm-url]
 [![Build status][travis-image]][travis-url]
@@ -8,7 +8,7 @@ immutability-helper
 
 Mutate a copy of data without changing the original source
 
-This is a drop in replacement for [`react-addons-update`](https://facebook.github.io/react/docs/update.html):
+This is a drop in* replacement for [`react-addons-update`](https://facebook.github.io/react/docs/update.html):
 
 ```js
 // import update from 'react-addons-update';
@@ -19,6 +19,8 @@ const state2 = update(state1, {$push: ['y']}); // ['x', 'y']
 ```
 
 Note that this module has nothing to do with react, however since this module is most commonly used with react, the docs will focus on how it can be used with react.
+
+\* With the caveat that multi-element `$splice` now works [as expected](https://github.com/kolodny/immutability-helper/issues/12) regardless of order.
 
 ## Overview
 
@@ -148,12 +150,3 @@ myUpdate.extend('$foo', function(value, original) {
   return 'foo!';
 });
 ```
-
-[npm-image]: https://img.shields.io/npm/v/immutability-helper.svg?style=flat-square
-[npm-url]: https://npmjs.org/package/immutability-helper
-[travis-image]: https://img.shields.io/travis/kolodny/immutability-helper.svg?style=flat-square
-[travis-url]: https://travis-ci.org/kolodny/immutability-helper
-[coveralls-image]: https://img.shields.io/coveralls/kolodny/immutability-helper.svg?style=flat-square
-[coveralls-url]: https://coveralls.io/r/kolodny/immutability-helper
-[downloads-image]: http://img.shields.io/npm/dm/immutability-helper.svg?style=flat-square
-[downloads-url]: https://npmjs.org/package/immutability-helper
