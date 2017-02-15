@@ -88,7 +88,7 @@ var defaultCommands = {
   $splice: function(value, nextObject, spec, object) {
     var originalValue = nextObject === object ? copy(object) : nextObject;
     invariantSplices(originalValue, spec);
-    var sortedValue = Array.prototype.slice.call(value).sort((a,b) => {
+    var sortedValue = Array.prototype.slice.call(value).sort(function(a,b) {
       if(a[0] < b[0]) return 1;
       if(a[0] > b[0]) return -1;
       return 0;
