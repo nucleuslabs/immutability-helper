@@ -1,21 +1,27 @@
-immutability-helper
-===================
+immutability-helper2
+====================
 
-Mutate a copy of data without changing the original source
+Mutate a copy of data without changing the original source.
 
-This is a drop in* replacement for [`react-addons-update`](https://facebook.github.io/react/docs/update.html):
+This is a drop-in* replacement for [`react-addons-update`](https://facebook.github.io/react/docs/update.html):
 
 ```js
 // import update from 'react-addons-update';
-import update from 'immutability-helper';
+import update from 'immutability-helper2';
 
 const state1 = ['x'];
 const state2 = update(state1, {$push: ['y']}); // ['x', 'y']
 ```
 
-Note that this module has nothing to do with react, however since this module is most commonly used with react, the docs will focus on how it can be used with react.
+Note that this module has nothing to do with React, however since this module is most commonly used with React, the docs will focus on how it can be used with react.
 
 \* With the caveat that multi-element `$splice` now works [as expected](https://github.com/kolodny/immutability-helper/issues/12) regardless of order.
+
+## Installation
+
+```sh
+yarn add immutability-helper2
+```
 
 ## Overview
 

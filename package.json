@@ -1,7 +1,7 @@
 {
   "name": "immutability-helper2",
   "version": "2.1.2",
-  "description": "mutate a copy of data without changing the original source",
+  "description": "Mutate a copy of data without changing the original source",
   "main": "index.js",
   "scripts": {
     "test-cov": "nyc npm test && nyc report --reporter=lcov",
