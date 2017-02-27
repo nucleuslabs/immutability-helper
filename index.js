@@ -12,7 +12,7 @@ var assign = Object.assign || function assign(target, source) {
     }
   }
   return target;
-}
+};
 
 var getAllKeys = typeof Object.getOwnPropertySymbols === 'function' ?
   function(obj) { return Object.keys(obj).concat(Object.getOwnPropertySymbols(obj)) } :
@@ -34,7 +34,7 @@ function newContext() {
   var commands = assign({}, defaultCommands);
   update.extend = function(directive, fn) {
     commands[directive] = fn;
-  }
+  };
 
   return update;
 
@@ -55,9 +55,9 @@ function newContext() {
     );
 
     var nextObject = object;
-    var specKeys = getAllKeys(spec)
-    var index, key;
-    for (index = 0; index < specKeys.length; index++) {
+    var specKeys = getAllKeys(spec);
+    var index;
+    for (index = 0; index < specKeys.length; ++index) {
       var key = specKeys[index];
       if (hasOwnProperty.call(commands, key)) {
         nextObject = commands[key](spec[key], nextObject, spec, object);
@@ -73,7 +73,6 @@ function newContext() {
     }
     return nextObject;
   }
-
 }
 
 var defaultCommands = {
