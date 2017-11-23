@@ -115,7 +115,7 @@ var defaultCommands = {
     });
     sortedValue.forEach(function(args) {
       invariantSplice(args);
-      if (nextObject === originalObject && args.length) nextObject = copy(originalObject);
+      if(nextObject === originalObject && args.length) nextObject = copy(originalObject);
       splice.apply(nextObject, args);
     });
     return nextObject;
