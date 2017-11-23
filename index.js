@@ -3,41 +3,64 @@ var invariant = require('invariant');
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 var splice = Array.prototype.splice;
 
-function assign(target, source) {
-  for (var key in source) {
-    if (hasOwnProperty.call(source, key)) {
-      target[key] = source[key];
-    }
-  }
-  return target;
+var toString = Object.prototype.toString
+var type = function(obj) {
+  return toString.call(obj).slice(8, -1);
 }
 
+var assign = Object.assign || /* istanbul ignore next */ function assign(target, source) {
+  getAllKeys(source).forEach(function(key) {
+    if(hasOwnProperty.call(source, key)) {
+      target[key] = source[key];
+    }
+  });
+  return target;
+};
+
+var getAllKeys = typeof Object.getOwnPropertySymbols === 'function' ?
+  function(obj) {
+    return Object.keys(obj).concat(Object.getOwnPropertySymbols(obj))
+  } :
+  /* istanbul ignore next */ function(obj) {
+    return Object.keys(obj)
+  };
+
+/* istanbul ignore next */
 function copy(object) {
-  if (object instanceof Array) {
-    return object.slice();
-  } else if (object && typeof object === 'object') {
-    return assign(new object.constructor(), object);
+  if(Array.isArray(object)) {
+    return assign(object.constructor(object.length), object)
+  } else if(type(object) === 'Map') {
+    return new Map(object)
+  } else if(type(object) === 'Set') {
+    return new Set(object)
+  } else if(object && typeof object === 'object') {
+    var prototype = object.constructor && object.constructor.prototype
+    return assign(Object.create(prototype || null), object);
   } else {
     return object;
   }
 }
 
-
 function newContext() {
   var commands = assign({}, defaultCommands);
   update.extend = function(directive, fn) {
     commands[directive] = fn;
-  }
+  };
+  update.isEquals = function(a, b) {
+    return a === b;
+  };
 
   return update;
 
   function update(object, spec) {
-    invariant(
-      !Array.isArray(spec),
-      'update(): You provided an invalid spec to update(). The spec may ' +
-      'not contain an array except as the value of $set, $push, $unshift, ' +
-      '$splice or any custom command allowing an array value.'
-    );
+    if(!(Array.isArray(object) && Array.isArray(spec))) {
+      invariant(
+        !Array.isArray(spec),
+        'update(): You provided an invalid spec to update(). The spec may ' +
+        'not contain an array except as the value of $set, $push, $unshift, ' +
+        '$splice or any custom command allowing an array value.'
+      );
+    }
 
     invariant(
       typeof spec === 'object' && spec !== null,
@@ -47,68 +70,116 @@ function newContext() {
       Object.keys(commands).join(', ')
     );
 
-    var newObject = object;
-    for (var key in spec) {
-      if (hasOwnProperty.call(commands, key)) {
-        return commands[key](spec[key], newObject, spec, object);
+    var nextObject = object;
+    var index, key;
+    getAllKeys(spec).forEach(function(key) {
+      if(hasOwnProperty.call(commands, key)) {
+        var objectWasNextObject = object === nextObject;
+        nextObject = commands[key](spec[key], nextObject, spec, object);
+        if(objectWasNextObject && update.isEquals(nextObject, object)) {
+          nextObject = object;
+        }
+      } else {
+        var nextValueForKey = update(object[key], spec[key]);
+        if(!update.isEquals(nextValueForKey, nextObject[key]) || typeof nextValueForKey === 'undefined' && !hasOwnProperty.call(object, key)) {
+          if(nextObject === object) {
+            nextObject = copy(object);
+          }
+          nextObject[key] = nextValueForKey;
+        }
       }
-    }
-    for (var key in spec) {
-      var nextValueForKey = update(object[key], spec[key]);
-      if (nextValueForKey === object[key]) {
-        continue;
-      }
-      if (newObject === object) {
-        newObject = copy(object);
-      }
-      newObject[key] = nextValueForKey;
-    }
-    return newObject;
+    })
+    return nextObject;
   }
 
 }
 
 var defaultCommands = {
-  $push: function(value, original, spec) {
-    invariantPushAndUnshift(original, spec, '$push');
-    return value.length ? original.concat(value) : original;
+  $push: function(value, nextObject, spec) {
+    invariantPushAndUnshift(nextObject, spec, '$push');
+    return value.length ? nextObject.concat(value) : nextObject;
   },
-  $unshift: function(value, original, spec) {
-    invariantPushAndUnshift(original, spec, '$unshift');
-    return value.length ? value.concat(original) : original;
+  $unshift: function(value, nextObject, spec) {
+    invariantPushAndUnshift(nextObject, spec, '$unshift');
+    return value.length ? value.concat(nextObject) : nextObject;
   },
-  $splice: function(value, newObject, spec, object) {
-    invariantSplices(newObject, spec);
-    if (!value.length) {
-      return newObject;
+  $splice: function(value, nextObject, spec, originalObject) {
+    invariantSplices(nextObject, spec);
+    if(!value.length) {
+      return nextObject;
     }
-    var originalValue = newObject === object ? copy(object) : newObject;
-    var sortedValue = Array.prototype.slice.call(value).sort(function(a,b) {
+    var sortedValue = Array.prototype.slice.call(value).sort(function(a, b) {
       if(a[0] < b[0]) return 1;
       if(a[0] > b[0]) return -1;
       return 0;
     });
     sortedValue.forEach(function(args) {
       invariantSplice(args);
-      splice.apply(originalValue, args);
+      if (nextObject === originalObject && args.length) nextObject = copy(originalObject);
+      splice.apply(nextObject, args);
     });
-    return originalValue;
+    return nextObject;
   },
-  $set: function(value, original, spec) {
+  $set: function(value, nextObject, spec) {
     invariantSet(spec);
     return value;
   },
-  $merge: function(value, newObject, spec, object) {
-    invariantMerge(newObject, value);
-    var keys = Object.keys(value);
-    if (!keys.length) {
-      return newObject;
-    }
-    var originalValue = newObject === object ? copy(object) : newObject;
-    Object.keys(value).forEach(function(key) {
-      originalValue[key] = value[key];
+  $toggle: function(targets, nextObject) {
+    invariantSpecArray(targets, '$toggle');
+    var nextObjectCopy = targets.length ? copy(nextObject) : nextObject;
+
+    targets.forEach(function(target) {
+      nextObjectCopy[target] = !nextObject[target];
     });
-    return originalValue;
+
+    return nextObjectCopy;
+  },
+  $unset: function(value, nextObject, spec, originalObject) {
+    invariantSpecArray(value, '$unset');
+    value.forEach(function(key) {
+      if(Object.hasOwnProperty.call(nextObject, key)) {
+        if(nextObject === originalObject) nextObject = copy(originalObject);
+        delete nextObject[key];
+      }
+    });
+    return nextObject;
+  },
+  $add: function(value, nextObject, spec, originalObject) {
+    invariantMapOrSet(nextObject, '$add');
+    invariantSpecArray(value, '$add');
+    if(type(nextObject) === 'Map') {
+      value.forEach(function(pair) {
+        var key = pair[0];
+        var value = pair[1];
+        if(nextObject === originalObject && nextObject.get(key) !== value) nextObject = copy(originalObject);
+        nextObject.set(key, value);
+      });
+    } else {
+      value.forEach(function(value) {
+        if(nextObject === originalObject && !nextObject.has(value)) nextObject = copy(originalObject);
+        nextObject.add(value);
+      });
+    }
+    return nextObject;
+  },
+  $remove: function(value, nextObject, spec, originalObject) {
+    invariantMapOrSet(nextObject, '$remove');
+    invariantSpecArray(value, '$remove');
+    value.forEach(function(key) {
+      if(nextObject === originalObject && nextObject.has(key)) nextObject = copy(originalObject);
+      nextObject.delete(key);
+    });
+    return nextObject;
+  },
+  $merge: function(value, nextObject, spec, originalObject) {
+    invariantMerge(nextObject, value);
+    getAllKeys(value).forEach(function(key) {
+      if(value[key] !== nextObject[key]) {
+        if(nextObject === originalObject) nextObject = copy(originalObject);
+        nextObject[key] = value[key];
+      }
+    });
+    return nextObject;
   },
   $apply: function(value, original) {
     invariantApply(value);
@@ -116,11 +187,8 @@ var defaultCommands = {
   }
 };
 
-
-
 module.exports = newContext();
 module.exports.newContext = newContext;
-
 
 // invariants
 
@@ -131,13 +199,16 @@ function invariantPushAndUnshift(value, spec, command) {
     command,
     value
   );
-  var specValue = spec[command];
+  invariantSpecArray(spec[command], command)
+}
+
+function invariantSpecArray(spec, command) {
   invariant(
-    Array.isArray(specValue),
+    Array.isArray(spec),
     'update(): expected spec of %s to be an array; got %s. ' +
     'Did you forget to wrap your parameter in an array?',
     command,
-    specValue
+    spec
   );
 }
 
@@ -184,5 +255,15 @@ function invariantMerge(target, specValue) {
     target && typeof target === 'object',
     'update(): $merge expects a target of type \'object\'; got %s',
     target
+  );
+}
+
+function invariantMapOrSet(target, command) {
+  var typeOfTarget = type(target);
+  invariant(
+    typeOfTarget === 'Map' || typeOfTarget === 'Set',
+    'update(): %s expects a target of type Set or Map; got %s',
+    command,
+    typeOfTarget
   );
 }
